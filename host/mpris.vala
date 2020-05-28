@@ -263,8 +263,8 @@ class Mpris : AbstractBrowserPlugin, Object {
             // both doubles are calculated the same way and coherent.
             if (volume != old_volume)
                 player.Volume = volume;
-            player.length = (int64)json.get_double_member("duration") * 1000000;
-            player.Position = (int64)json.get_double_member("currentTime") * 1000000;
+            player.length = (int64)(json.get_double_member("duration") * 1000000);
+            player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
             double playback_rate = json.get_double_member("playbackRate");
             if (player.Rate != playback_rate)
                 player.Rate = playback_rate;
@@ -289,12 +289,12 @@ class Mpris : AbstractBrowserPlugin, Object {
         case "stopped": player.set_playback_status("Stopped"); break;
         case "canplay": player.set_playback_status("Playing"); break;
         case "duration":
-            player.length = (int64)json.get_double_member("duration") * 1000000;
+            player.length = (int64)(json.get_double_member("duration") * 1000000);
             break;
         case "timeupdate":
             // FIXME: shall be not signalling to avoid excess dbus traffic
             // media controller asks for this property once when it opens
-            player.Position = (int64)json.get_double_member("currentTime") * 1000000;
+            player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
             break;
         case "ratechange":
             player.Rate = json.has_member("playbackRate")
@@ -302,7 +302,7 @@ class Mpris : AbstractBrowserPlugin, Object {
             break;
         case "seeking":
         case "seeked":
-            player.Position = (int64)json.get_double_member("currentTime") * 1000000;
+            player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
             break;
         case "volumechange":
             player.muted  = json.has_member("muted")
