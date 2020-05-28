@@ -10,12 +10,14 @@ void create(OnDataReceived handler) {
     generator = new Json.Generator();
     parser = new Json.Parser();
     data_received = handler;
-
-    var channel = new IOChannel.unix_new(stdin.fileno());
-    channel.set_encoding(null);
-    channel.set_buffered(false);
-    channel.add_watch(IOCondition.IN, read_data);
-
+    try {
+        var channel = new IOChannel.unix_new(stdin.fileno());
+        channel.set_encoding(null);
+        channel.set_buffered(false);
+        channel.add_watch(IOCondition.IN, read_data);
+    } catch (IOChannelError e) {
+        error("stdin unavailable: %s.", e.message);
+    }
     created = true;
 }
 
@@ -35,13 +37,23 @@ void send_data(Json.Object data) {
 
 bool read_data(IOChannel source, IOCondition condition) {
     debug("read_data()");
-    size_t rc;
-    uint32 length = 0;
-    source.read_chars((char[])&length, out rc);
-    char[] data = new char[length];
-    source.read_chars(data, out rc);
-    debug((string)data);
-    parser.load_from_data((string)data, length);
+    if (condition == IOCondition.HUP) {
+        error("Connection lost.\n");
+    }
+    try {
+        size_t rc;
+        uint32 length = 0;
+        source.read_chars((char[])&length, out rc);
+        char[] data = new char[length];
+        source.read_chars(data, out rc);
+        debug((string)data);
+        parser.load_from_data((string)data, length);
+    }
+    // Actually only IOChannelError (no ConvertError when no encoding).
+    catch (Error e) {
+        debug("%s %s\n", e.domain.to_string(), e.message);
+        return false;
+    }
     var json = parser.get_root().get_object();
     // FIXME: sent event
     data_received(json);
