@@ -4,7 +4,7 @@ namespace PluginManager {
 void add_plugin(AbstractBrowserPlugin plugin) {
     if (plugins == null)
         plugins = new HashTable<string, AbstractBrowserPlugin>(str_hash, str_equal);
-    plugins.insert(plugin.subsystem_name, plugin);
+    plugins.insert(plugin.subsystem_name(), plugin);
     Connection.create(on_data_received);
 }
 

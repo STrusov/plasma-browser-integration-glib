@@ -3,7 +3,7 @@
 /** [[https://specifications.freedesktop.org/mpris-spec/latest/|MPRIS D-Bus Interface Specification]] */
 class Mpris : AbstractBrowserPlugin, Object {
 
-    public string subsystem_name { get { return "mpris"; } }
+    public unowned string subsystem_name() { return "mpris"; }
 
     /** [[https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html|Specification]] */
     [DBus(name = "org.mpris.MediaPlayer2")]
