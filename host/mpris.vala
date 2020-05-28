@@ -243,7 +243,7 @@ class Mpris : AbstractBrowserPlugin, Object {
     }
 
     public void handle_data(string event, Json.Object json) {
-        debug("Event: %s.", event);
+        debug("Browser event: %s.", event);
         switch (event) {
         case "gone":
             // TODO: unregister_service()
@@ -326,7 +326,7 @@ class Mpris : AbstractBrowserPlugin, Object {
                 mp.Fullscreen = fullscreen;
             break;
         default:
-            debug("Unknown event: %s.", event);
+            warning("Unknown event: %s.", event);
             break;
         }
     }

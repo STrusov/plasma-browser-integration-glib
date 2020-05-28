@@ -22,7 +22,6 @@ void create(OnDataReceived handler) {
 }
 
 void send_data(Json.Object data) {
-    debug("send_data()");
     var root = new Json.Node(Json.NodeType.OBJECT);
     root.set_object(data);
     generator.set_root(root);
@@ -32,11 +31,10 @@ void send_data(Json.Object data) {
     stdout.write((uint8[])&len32);
     stdout.write(str_data.data);
     stdout.flush();
-    debug((string)data);
+    debug("send_data: %s", (string)str_data.data);
 }
 
 bool read_data(IOChannel source, IOCondition condition) {
-    debug("read_data()");
     if (condition == IOCondition.HUP) {
         error("Connection lost.\n");
     }
@@ -46,12 +44,12 @@ bool read_data(IOChannel source, IOCondition condition) {
         source.read_chars((char[])&length, out rc);
         char[] data = new char[length];
         source.read_chars(data, out rc);
-        debug((string)data);
+        debug("read_data: %s", (string)data);
         parser.load_from_data((string)data, length);
     }
     // Actually only IOChannelError (no ConvertError when no encoding).
     catch (Error e) {
-        debug("%s %s\n", e.domain.to_string(), e.message);
+        warning("%s %s\n", e.domain.to_string(), e.message);
         return false;
     }
     var json = parser.get_root().get_object();

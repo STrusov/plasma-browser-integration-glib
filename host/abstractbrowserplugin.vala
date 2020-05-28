@@ -6,7 +6,6 @@ interface AbstractBrowserPlugin : Object {
     public abstract void handle_data(string event, Json.Object json);
 
     public void send_data(string action, Json.Object? payload = null) {
-        info(action);
         var data = new Json.Object();
         data.set_string_member("subsystem", subsystem_name());
         data.set_string_member("action", action);
