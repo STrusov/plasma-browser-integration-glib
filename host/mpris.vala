@@ -106,6 +106,7 @@ class Mpris : AbstractBrowserPlugin, Object {
                                             .printf(Posix.getpid()),
             BusNameOwnerFlags.NONE,
             (conn, name) => {
+                dbus_conn = conn;
                 try {
                     conn.register_object("/org/mpris/MediaPlayer2", mp);
                     conn.register_object("/org/mpris/MediaPlayer2", player);
@@ -116,17 +117,71 @@ class Mpris : AbstractBrowserPlugin, Object {
             (conn, name) => info("Bus name %s aquired.", name),
             (conn, name) => critical("Bus name %s lost.", name)
         );
+        property_changes[0] = new HashTable<string, Variant>(str_hash, str_equal);
+        property_changes[1] = new HashTable<string, Variant>(str_hash, str_equal);
         // FIXME: does the original host handle property changes made by D-Bus?
-        mp.notify.connect_after((source, property) => {
-            debug("Property '%s' has changed by %s.\n",
-                property.name,
-                source.get_type().name());
-        });
-        player.notify.connect_after((source, property) => {
-            debug("Property '%s' has changed by %s.\n",
-                property.name,
-                source.get_type().name());
-        });
+        mp.notify.connect_after(mp_property_changed);
+        player.notify.connect_after(player_property_changed);
+    }
+
+    DBusConnection dbus_conn;
+    HashTable<string, Variant> property_changes[2];
+    uint pending = 0;
+
+    void mp_property_changed(Object source, ParamSpec property) {
+        shedule_property_changes(source, property, 0);
+    }
+    void player_property_changed(Object source, ParamSpec property) {
+        shedule_property_changes(source, property, 1);
+    }
+    void shedule_property_changes(Object source, ParamSpec property, int id) {
+        debug("%s.%s changed.", source.get_type().name(), property.name);
+        var val = Value(property.value_type);
+        source.get_property(property.name, ref val);
+        switch (property.value_type) {
+        case Type.INT64:  property_changes[id][property.name] = val.get_int64();
+            break;
+        case Type.DOUBLE: property_changes[id][property.name] = val.get_double();
+            break;
+        case Type.STRING: property_changes[id][property.name] = val.get_string();
+            break;
+        case Type.BOOLEAN: property_changes[id][property.name] = val.get_boolean();
+            break;
+        default: warning("%s", property.value_type.qname().to_string());
+            break;
+        }
+        if (pending == 0)
+            pending = Timeout.add((1000/60/2), send_property_changes);
+    }
+    bool send_property_changes() {
+        pending = 0;
+        string names[] = {
+            "org.mpris.MediaPlayer2",
+            "org.mpris.MediaPlayer2.Player"
+        };
+        for (int i = 0; i < 2; ++i) {
+            unowned var iface = property_changes[i];
+            if (iface.length == 0)
+                continue;
+            var builder = new VariantBuilder(VariantType.ARRAY);
+            var iter = HashTableIter<string, Variant>(iface);
+            unowned string name;
+            unowned Variant val;
+            while (iter.next(out name, out val)) {
+                builder.add("{sv}", name, val);
+            }
+            iface.remove_all();
+            var changes = new Variant("(sa{sv}as)", names[i], builder);
+            debug("send_property_changes: %s", changes.print(false));
+            try {
+                dbus_conn.emit_signal(null, "/org/mpris/MediaPlayer2",
+                                      "org.freedesktop.DBus.Properties",
+                                      "PropertiesChanged", changes);
+            } catch (Error e) {
+                warning("emit_signal failed: %s", e.message);
+            }
+        }
+        return false;
     }
 
     MediaPlayer2    mp;
