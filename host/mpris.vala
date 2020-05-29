@@ -60,7 +60,10 @@ class Mpris : AbstractBrowserPlugin, Object {
                 get { return muted ? 0.0 : volume; }
                 set { volume = value; }
             }
-            public int64 Position     { get; set; default = 0; }
+            // If the playback progresses in a way that is inconstistant
+            // with the Rate property, the Seeked signal is emited.
+            [CCode(notify = false)]
+            public int64 Position     { get; internal set; default = 0; }
             public double MinimumRate { get { return 0.01; } }
             public double MaximumRate { get { return 32; } }
             public bool CanGoNext     { get; private set; default = false; }
@@ -81,8 +84,12 @@ class Mpris : AbstractBrowserPlugin, Object {
                 }
             }
             internal void set_playback_status(string status) {
-                if (PlaybackStatus != status)
+                if (PlaybackStatus != status) {
                     PlaybackStatus = status;
+                // FIXME: do we need the following notifications?
+                //    impl.property_changes[1]["CanPlay"] = CanPlay;
+                //    impl.property_changes[1]["CanPause"] = CanPause;
+                }
             }
             internal void process_callbacks(Json.Array data) {
 
@@ -292,8 +299,6 @@ class Mpris : AbstractBrowserPlugin, Object {
             player.length = (int64)(json.get_double_member("duration") * 1000000);
             break;
         case "timeupdate":
-            // FIXME: shall be not signalling to avoid excess dbus traffic
-            // media controller asks for this property once when it opens
             player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
             break;
         case "ratechange":
@@ -303,6 +308,7 @@ class Mpris : AbstractBrowserPlugin, Object {
         case "seeking":
         case "seeked":
             player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
+            player.Seeked(player.Position);
             break;
         case "volumechange":
             player.muted  = json.has_member("muted")
