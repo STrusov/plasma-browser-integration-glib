@@ -9,6 +9,7 @@ class Mpris : AbstractBrowserPlugin, Object {
     [DBus(name = "org.mpris.MediaPlayer2")]
     class MediaPlayer2 : Object {
         Mpris impl;
+        internal const int id = 0;
 
         public MediaPlayer2(Mpris impl) { this.impl = impl; }
 
@@ -29,6 +30,7 @@ class Mpris : AbstractBrowserPlugin, Object {
         [DBus(name = "org.mpris.MediaPlayer2.Player")]
         protected class Player : Object {
             Mpris impl;
+            internal const int id = MediaPlayer2.id + 1;
 
             public Player(Mpris impl) { this.impl = impl; }
 
@@ -55,10 +57,20 @@ class Mpris : AbstractBrowserPlugin, Object {
             public HashTable<string, Variant> Metadata { get; private set; }
 
             internal bool muted = false;
-            private double volume = 1.0;
+            // The following property is to be set only by DBus manager.
+            // On browser event the corresponding variable shall be accessed by
+            // appropriate methods sheduling PropertiesChanged notifycation manually.
+            private double _volume = 1.0;
+            internal double get_volume() { return _volume; }
+            internal void set_volume(double vol) {
+                _volume = vol;
+                impl.property_changes[id]["Volume"] = Volume;
+                impl.shedule_property_changes();
+            }
+            [CCode(notify = false)]
             public double Volume {
-                get { return muted ? 0.0 : volume; }
-                set { volume = value; }
+                get { return muted ? 0.0 : _volume; }
+                private set { impl.set_volume(_volume = value); }
             }
             // If the playback progresses in a way that is inconstistant
             // with the Rate property, the Seeked signal is emited.
@@ -124,9 +136,8 @@ class Mpris : AbstractBrowserPlugin, Object {
             (conn, name) => info("Bus name %s aquired.", name),
             (conn, name) => critical("Bus name %s lost.", name)
         );
-        property_changes[0] = new HashTable<string, Variant>(str_hash, str_equal);
-        property_changes[1] = new HashTable<string, Variant>(str_hash, str_equal);
-        // FIXME: does the original host handle property changes made by D-Bus?
+        for (var i = MediaPlayer2.id; i <= MediaPlayer2.Player.id; ++i)
+            property_changes[i] = new HashTable<string, Variant>(str_hash, str_equal);
         mp.notify.connect_after(mp_property_changed);
         player.notify.connect_after(player_property_changed);
     }
@@ -136,12 +147,12 @@ class Mpris : AbstractBrowserPlugin, Object {
     uint pending = 0;
 
     void mp_property_changed(Object source, ParamSpec property) {
-        shedule_property_changes(source, property, 0);
+        property_changed(source, property, MediaPlayer2.id);
     }
     void player_property_changed(Object source, ParamSpec property) {
-        shedule_property_changes(source, property, 1);
+        property_changed(source, property, MediaPlayer2.Player.id);
     }
-    void shedule_property_changes(Object source, ParamSpec property, int id) {
+    void property_changed(Object source, ParamSpec property, int id) {
         debug("%s.%s changed.", source.get_type().name(), property.name);
         var val = Value(property.value_type);
         source.get_property(property.name, ref val);
@@ -157,6 +168,9 @@ class Mpris : AbstractBrowserPlugin, Object {
         default: warning("%s", property.value_type.qname().to_string());
             break;
         }
+        shedule_property_changes();
+    }
+    void shedule_property_changes() {
         if (pending == 0)
             pending = Timeout.add((1000/60/2), send_property_changes);
     }
@@ -248,6 +262,11 @@ class Mpris : AbstractBrowserPlugin, Object {
         payload.set_double_member("position", position / 1000.0 / 1000.0);
         send_data("setPosition", payload);
     }
+    void set_volume(double volume) {
+        var payload = new Json.Object();
+        payload.set_double_member("volume", volume);
+        send_data("setVolume", payload);
+    }
 
     public void handle_data(string event, Json.Object json) {
         debug("Browser event: %s.", event);
@@ -264,12 +283,11 @@ class Mpris : AbstractBrowserPlugin, Object {
             string media_src  = json.get_string_member("mediaSrc");
             string poster_url = json.get_string_member("poster");
             // TODO: Metadata
-            double old_volume = player.Volume;
             player.muted  = json.get_boolean_member("muted");
             double volume = json.get_double_member("volume");
             // both doubles are calculated the same way and coherent.
-            if (volume != old_volume)
-                player.Volume = volume;
+            if (volume != player.get_volume())
+                player.set_volume(volume);
             player.length = (int64)(json.get_double_member("duration") * 1000000);
             player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
             double playback_rate = json.get_double_member("playbackRate");
@@ -313,8 +331,9 @@ class Mpris : AbstractBrowserPlugin, Object {
         case "volumechange":
             player.muted  = json.has_member("muted")
                           ? json.get_boolean_member("muted") : false;
-            player.Volume = json.has_member("volume")
+            double volume = json.has_member("volume")
                           ? json.get_double_member("volume") : 1.0;
+            player.set_volume(volume);
             break;
         case "metadata":
             player.process_metadata(json.get_object_member("metadata"));
