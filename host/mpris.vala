@@ -54,7 +54,9 @@ class Mpris : AbstractBrowserPlugin, Object {
             public string LoopStatus { get; set; default = "None"; }
             public double Rate { get; set; default = 1.0; }
 //            public bool Shuffle { get; set; }
-            public HashTable<string, Variant> Metadata { get; private set; }
+            public  HashTable<string, Variant> Metadata {
+                get; internal set; default = new HashTable<string, Variant>(str_hash, str_equal);
+            }
 
             internal bool muted = false;
             // The following property is to be set only by DBus manager.
@@ -89,11 +91,7 @@ class Mpris : AbstractBrowserPlugin, Object {
             [CCode(notify = false)]
             internal int64 length {
                 get { return _length; }
-                set {
-                    _length = value;
-                    CanSeek = (value > 0);
-                    // TODO: Metadata
-                }
+                set { _length = value;  CanSeek = (value > 0); }
             }
             internal void set_playback_status(string status) {
                 if (PlaybackStatus != status) {
@@ -104,9 +102,6 @@ class Mpris : AbstractBrowserPlugin, Object {
                 }
             }
             internal void process_callbacks(Json.Array data) {
-
-            }
-            internal void process_metadata(Json.Object data) {
 
             }
         }
@@ -165,7 +160,11 @@ class Mpris : AbstractBrowserPlugin, Object {
             break;
         case Type.BOOLEAN: property_changes[id][property.name] = val.get_boolean();
             break;
-        default: warning("%s", property.value_type.qname().to_string());
+        default:
+            if (property.name == "Metadata")
+                property_changes[id][property.name] = (HashTable<string, Variant>)val;
+            else
+                warning("%s", property.value_type.qname().to_string());
             break;
         }
         shedule_property_changes();
@@ -268,6 +267,10 @@ class Mpris : AbstractBrowserPlugin, Object {
         send_data("setVolume", payload);
     }
 
+    // (since = "1.6") get_string_member_with_default
+    private static unowned string json_get_string_member(Json.Object json, string name) {
+        return json.has_member(name) ? json.get_string_member(name) : "";
+    }
     public void handle_data(string event, Json.Object json) {
         debug("Browser event: %s.", event);
         switch (event) {
@@ -277,12 +280,15 @@ class Mpris : AbstractBrowserPlugin, Object {
             break;
         case "playing":
             player.set_playback_status("Playing");
-            string page_title = json.get_string_member("pageTitle");
-            string tab_title  = json.get_string_member("tabTitle");
-            string url        = json.get_string_member("url");
-            string media_src  = json.get_string_member("mediaSrc");
-            string poster_url = json.get_string_member("poster");
-            // TODO: Metadata
+            page_title = json_get_string_member(json, "pageTitle");
+            tab_title  = json_get_string_member(json, "tabTitle");
+            url        = json_get_string_member(json, "url");
+            media_src  = json_get_string_member(json, "mediaSrc");
+            string poster_url = json_get_string_member(json, "poster");
+            if (this.poster_url != poster_url) {
+                this.poster_url = poster_url;
+                // FIXME: ? player.Metadata = metadata();
+            }
             player.muted  = json.get_boolean_member("muted");
             double volume = json.get_double_member("volume");
             // both doubles are calculated the same way and coherent.
@@ -306,7 +312,7 @@ class Mpris : AbstractBrowserPlugin, Object {
             bool can_set_fullscreen = json.get_boolean_member("canSetFullscreen");
             if (mp.CanSetFullscreen != can_set_fullscreen)
                 mp.set_can_set_fullscreen(can_set_fullscreen);
-            player.process_metadata(json.get_object_member("metadata"));
+            process_metadata(json.get_object_member("metadata"));
             player.process_callbacks(json.get_array_member("callbacks"));
             break;
         case "waiting":
@@ -314,7 +320,11 @@ class Mpris : AbstractBrowserPlugin, Object {
         case "stopped": player.set_playback_status("Stopped"); break;
         case "canplay": player.set_playback_status("Playing"); break;
         case "duration":
-            player.length = (int64)(json.get_double_member("duration") * 1000000);
+            int64 length = (int64)(json.get_double_member("duration") * 1000000);
+            if (player.length != length) {
+                player.length = length;
+                player.Metadata = metadata();
+            }
             break;
         case "timeupdate":
             player.Position = (int64)(json.get_double_member("currentTime") * 1000000);
@@ -336,14 +346,16 @@ class Mpris : AbstractBrowserPlugin, Object {
             player.set_volume(volume);
             break;
         case "metadata":
-            player.process_metadata(json.get_object_member("metadata"));
+            process_metadata(json.get_object_member("metadata"));
             break;
         case "callbacks":
             player.process_callbacks(json.get_array_member("callbacks"));
             break;
         case "titlechange":
-            string page_title = json.get_string_member("pageTitle");
-            // TODO: Title
+            string old_title = effective_title();
+            page_title = json.get_string_member("pageTitle");
+            if (old_title != effective_title())
+                player.Metadata = metadata();
             break;
         case "fullscreenchange":
             bool fullscreen = json.get_boolean_member("fullscreen");
@@ -355,6 +367,66 @@ class Mpris : AbstractBrowserPlugin, Object {
             break;
         }
     }
+    // sent by the broswer plugin in a top-level JSON structure
+    string page_title = "";
+    string tab_title  = "";
+    string url        = "";
+    string media_src  = "";
+    string poster_url = "";
+    // and "metadata":{   }
+    string title       = "";
+    string artist      = "";
+    string album       = "";
+    string artwork_url = "";
 
+    unowned string effective_title() {
+        return title.length > 0 ? title
+             : page_title.length > 0 ? page_title
+             : tab_title;
+    }
+    void process_metadata(Json.Object data) {
+        title = json_get_string_member(data, "title");
+        artist = json_get_string_member(data, "artist");
+        album = json_get_string_member(data, "album");
+        artwork_url = "";
+        if (data.has_member("artwork")) {
+            Json.Array artwork = data.get_array_member("artwork");
+            int max_width = 0;
+            int max_height = 0;
+            artwork.foreach_element((array, idx, element_node) => {
+                Json.Object item = element_node.get_object();
+                if (item == null)
+                    return;
+                string sizes = json_get_string_member(item, "sizes");
+                int width = 0;
+                int height = 0;
+                if (sizes.scanf("%dx%d", ref width, ref height) != 2)
+                    return;
+                if (width >= max_width && height >= max_height)
+                    artwork_url = json_get_string_member(item, "src");
+            });
+        }
+        player.Metadata = metadata();
+    }
+    HashTable<string, Variant> metadata() {
+        var metadata = new HashTable<string, Variant>(str_hash, str_equal);
+        metadata.insert("xesam:title", effective_title());
+        if (url.length > 0)
+            metadata.insert("xesam:url", url);
+        if (media_src.length > 0)
+            metadata.insert("kde:mediaSrc", media_src);
+        if (player.length > 0)
+            metadata.insert("mpris:length", player.length);
+        if (artist.length > 0)
+            metadata.insert("xesam:artist", artist);
+        if (artwork_url.length > 0 )
+            metadata.insert("mpris:artUrl", artwork_url);
+        else if (poster_url.length > 0)
+            metadata.insert("mpris:artUrl", poster_url);
+        if (album.length > 0)
+            metadata.insert("xesam:album", album);
+        // TODO: when we don't have artist information use the scheme+domain as "album" (that's what Chrome on Android does)
+        return metadata;
+    }
 }
 
