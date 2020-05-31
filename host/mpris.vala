@@ -426,9 +426,7 @@ class Mpris : AbstractBrowserPlugin, Object {
     }
     HashTable<string, Variant> metadata() {
         var metadata = new HashTable<string, Variant>(str_hash, str_equal);
-        // HACK this is needed or else SetPosition won't do anything
-        // TODO: use something more sensible, e.g. at least have the tab id with the player in there or so
-        metadata.insert("mpris:trackid", "/org/kde/plasma/browser_integration/1337");
+        string trackid = effective_title();
         metadata.insert("xesam:title", effective_title());
         if (url != null)
             metadata.insert("xesam:url", url);
@@ -437,6 +435,7 @@ class Mpris : AbstractBrowserPlugin, Object {
         if (player != null)
             metadata.insert("mpris:length", player.length);
         if (artist != null) {
+            trackid += artist;
             string[] artists = { artist };
             metadata.insert("xesam:artist", artists);
         }
@@ -444,9 +443,13 @@ class Mpris : AbstractBrowserPlugin, Object {
             metadata.insert("mpris:artUrl", artwork_url);
         else if (poster_url != null)
             metadata.insert("mpris:artUrl", poster_url);
-        if (album != null)
+        if (album != null) {
             metadata.insert("xesam:album", album);
+            trackid += album;
         // TODO: when we don't have artist information use the scheme+domain as "album" (that's what Chrome on Android does)
+        }
+        metadata.insert("mpris:trackid", "/org/kde/plasma/browser_integration/"
+                        + Checksum.compute_for_string(ChecksumType.MD5, trackid));
         return metadata;
     }
 }
