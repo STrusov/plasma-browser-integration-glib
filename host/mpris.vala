@@ -410,6 +410,9 @@ class Mpris : AbstractBrowserPlugin, Object {
     }
     HashTable<string, Variant> metadata() {
         var metadata = new HashTable<string, Variant>(str_hash, str_equal);
+        // HACK this is needed or else SetPosition won't do anything
+        // TODO: use something more sensible, e.g. at least have the tab id with the player in there or so
+        metadata.insert("mpris:trackid", "/org/kde/plasma/browser_integration/1337");
         metadata.insert("xesam:title", effective_title());
         if (url.length > 0)
             metadata.insert("xesam:url", url);
