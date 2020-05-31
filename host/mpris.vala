@@ -269,7 +269,7 @@ class Mpris : AbstractBrowserPlugin, Object {
 
     // (since = "1.6") get_string_member_with_default
     private static unowned string json_get_string_member(Json.Object json, string name) {
-        return json.has_member(name) ? json.get_string_member(name) : "";
+        return json.has_member(name) ? json.get_string_member(name) : null;
     }
     public void handle_data(string event, Json.Object json) {
         debug("Browser event: %s.", event);
@@ -285,7 +285,7 @@ class Mpris : AbstractBrowserPlugin, Object {
             url        = json_get_string_member(json, "url");
             media_src  = json_get_string_member(json, "mediaSrc");
             string poster_url = json_get_string_member(json, "poster");
-            if (this.poster_url != poster_url) {
+            if (/*poster_url != null && */ this.poster_url != poster_url) {
                 this.poster_url = poster_url;
                 // FIXME: ? player.Metadata = metadata();
             }
@@ -368,27 +368,29 @@ class Mpris : AbstractBrowserPlugin, Object {
         }
     }
     // sent by the broswer plugin in a top-level JSON structure
-    string page_title = "";
-    string tab_title  = "";
-    string url        = "";
-    string media_src  = "";
-    string poster_url = "";
+    string page_title = null;
+    string tab_title  = null;
+    string url        = null;
+    string media_src  = null;
+    string poster_url = null;
     // and "metadata":{   }
-    string title       = "";
-    string artist      = "";
-    string album       = "";
-    string artwork_url = "";
+    string title       = null;
+    string artist      = null;
+    string album       = null;
+    string artwork_url = null;
 
     unowned string effective_title() {
-        return title.length > 0 ? title
-             : page_title.length > 0 ? page_title
-             : tab_title;
+        return title != null ? title
+            // the browser plugin may send pageTitle as an empty string.
+             : page_title != null && page_title.length > 0 ? page_title
+             : page_title != null ? tab_title
+             : "";
     }
     void process_metadata(Json.Object data) {
         title = json_get_string_member(data, "title");
         artist = json_get_string_member(data, "artist");
         album = json_get_string_member(data, "album");
-        artwork_url = "";
+        artwork_url = null;
         if (data.has_member("artwork")) {
             Json.Array artwork = data.get_array_member("artwork");
             int max_width = 0;
@@ -398,12 +400,17 @@ class Mpris : AbstractBrowserPlugin, Object {
                 if (item == null)
                     return;
                 string sizes = json_get_string_member(item, "sizes");
+                if (sizes == null)
+                    return;
                 int width = 0;
                 int height = 0;
                 if (sizes.scanf("%dx%d", ref width, ref height) != 2)
                     return;
-                if (width >= max_width && height >= max_height)
-                    artwork_url = json_get_string_member(item, "src");
+                if (width >= max_width && height >= max_height) {
+                    string url = json_get_string_member(item, "src");
+                    if (url != null)
+                        artwork_url = url;
+                }
             });
         }
         player.Metadata = metadata();
@@ -414,21 +421,21 @@ class Mpris : AbstractBrowserPlugin, Object {
         // TODO: use something more sensible, e.g. at least have the tab id with the player in there or so
         metadata.insert("mpris:trackid", "/org/kde/plasma/browser_integration/1337");
         metadata.insert("xesam:title", effective_title());
-        if (url.length > 0)
+        if (url != null)
             metadata.insert("xesam:url", url);
-        if (media_src.length > 0)
+        if (media_src != null)
             metadata.insert("kde:mediaSrc", media_src);
-        if (player.length > 0)
+        if (player != null)
             metadata.insert("mpris:length", player.length);
-        if (artist.length > 0) {
+        if (artist != null) {
             string[] artists = { artist };
             metadata.insert("xesam:artist", artists);
         }
-        if (artwork_url.length > 0 )
+        if (artwork_url != null )
             metadata.insert("mpris:artUrl", artwork_url);
-        else if (poster_url.length > 0)
+        else if (poster_url != null)
             metadata.insert("mpris:artUrl", poster_url);
-        if (album.length > 0)
+        if (album != null)
             metadata.insert("xesam:album", album);
         // TODO: when we don't have artist information use the scheme+domain as "album" (that's what Chrome on Android does)
         return metadata;
