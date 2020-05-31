@@ -102,7 +102,16 @@ class Mpris : AbstractBrowserPlugin, Object {
                 }
             }
             internal void process_callbacks(Json.Array data) {
-
+                data.foreach_element((array, idx, element_node) => {
+                    string item = element_node.get_string();
+                    switch (item) {
+                        case "nexttrack":     CanGoNext = true; break;
+                        case "previoustrack": CanGoPrevious = true; break;
+                        case "seekforward":
+                        case "seekbackward":  CanSeek = true; break;
+                        default: break;
+                    }
+                });
             }
         }
     } // class MediaPlayer2
