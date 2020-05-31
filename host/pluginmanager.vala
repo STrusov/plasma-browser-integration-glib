@@ -20,6 +20,15 @@ HashTable<string, AbstractBrowserPlugin> plugins;
 // settings_changed()
 
 // known_plugin_subsystems()
+delegate void PluginForeach(string name, AbstractBrowserPlugin plugin);
+void foreach_known_plugin(PluginForeach f) {
+    var iter = HashTableIter<string, AbstractBrowserPlugin>(plugins);
+    unowned string name;
+    unowned AbstractBrowserPlugin plugin;
+    while (iter.next(out name, out plugin)) {
+        f(name, plugin);
+    }
+}
 
 void on_data_received(Json.Object json) {
     if (!json.has_member("subsystem") || !json.has_member("event"))
@@ -36,10 +45,11 @@ void on_data_received(Json.Object json) {
     string event = json.get_string_member("event");
     if (json.has_member("serial")) {
         int64 serial = json.get_int_member("serial");
-        critical("serial " + int64.FORMAT, serial);
-        return;
-    }
-    plugin.handle_data(event, json);
+        var reply = plugin.handle_request(serial, event, json);
+        if (reply != null)
+            plugin.send_reply(serial, reply);
+    } else
+        plugin.handle_data(event, json);
 }
 
 }

@@ -26,10 +26,13 @@
    THE SOFTWARE.
 */
 
+const string host_version_string = "0.10-GLib";
+
 int main(string[] args)
 {
     Log.set_writer_func(Log.writer_journald);
 
+    PluginManager.add_plugin(new Settings());
     PluginManager.add_plugin(new Mpris());
 
     new MainLoop().run();

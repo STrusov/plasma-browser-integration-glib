@@ -4,6 +4,7 @@ sources = [
   'mpris.vala',
   'main.vala',
   'pluginmanager.vala',
+  'settings.vala',
 ]
 
 dependencies = [

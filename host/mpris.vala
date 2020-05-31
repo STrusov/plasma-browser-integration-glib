@@ -223,12 +223,8 @@ class Mpris : AbstractBrowserPlugin, Object {
             // FIXME: unimplemented
             send_data("quit");
     }
-    string identity {
-        get { return "identity"; }
-    }
-    string desktop_entry {
-        get { return "desktop_entry"; }
-    }
+    public string identity = "Browser integration";
+    public string desktop_entry = "";
 
     MediaPlayer2.Player player;
     void next() {
