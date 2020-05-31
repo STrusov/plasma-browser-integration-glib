@@ -417,8 +417,10 @@ class Mpris : AbstractBrowserPlugin, Object {
             metadata.insert("kde:mediaSrc", media_src);
         if (player.length > 0)
             metadata.insert("mpris:length", player.length);
-        if (artist.length > 0)
-            metadata.insert("xesam:artist", artist);
+        if (artist.length > 0) {
+            string[] artists = { artist };
+            metadata.insert("xesam:artist", artists);
+        }
         if (artwork_url.length > 0 )
             metadata.insert("mpris:artUrl", artwork_url);
         else if (poster_url.length > 0)
