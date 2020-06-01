@@ -91,7 +91,12 @@ class Mpris : AbstractBrowserPlugin, Object {
             [CCode(notify = false)]
             internal int64 length {
                 get { return _length; }
-                set { _length = value;  CanSeek = (value > 0); }
+                set {
+                    _length = value;
+                    bool can_seek = value > 0;
+                    if (CanSeek != can_seek)
+                        CanSeek = can_seek;
+                }
             }
             internal void set_playback_status(string status) {
                 if (PlaybackStatus != status) {
@@ -102,16 +107,25 @@ class Mpris : AbstractBrowserPlugin, Object {
                 }
             }
             internal void process_callbacks(Json.Array data) {
+                bool can_go_next = false;
+                bool can_go_previous = false;
+                bool can_seek = CanSeek;
                 data.foreach_element((array, idx, element_node) => {
                     string item = element_node.get_string();
                     switch (item) {
-                        case "nexttrack":     CanGoNext = true; break;
-                        case "previoustrack": CanGoPrevious = true; break;
+                        case "nexttrack":     can_go_next = true; break;
+                        case "previoustrack": can_go_previous = true; break;
                         case "seekforward":
-                        case "seekbackward":  CanSeek = true; break;
+                        case "seekbackward":  can_seek = true; break;
                         default: break;
                     }
                 });
+                if (CanGoNext != can_go_next)
+                    CanGoNext = can_go_next;
+                if (CanGoPrevious != can_go_previous)
+                    CanGoPrevious = can_go_previous;
+                if (CanSeek != can_seek)
+                    CanSeek = can_seek;
             }
         }
     } // class MediaPlayer2
