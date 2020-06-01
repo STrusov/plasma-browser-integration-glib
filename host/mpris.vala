@@ -181,10 +181,14 @@ class Mpris : AbstractBrowserPlugin, Object {
     uint pending = 0;
 
     void mp_property_changed(Object source, ParamSpec property) {
-        property_changed(source, property, MediaPlayer2.id);
+        // No reason to send PropertiesChanged to nowhere.
+        // Anyway properties will be read on interface creation.
+        if (mp_id != 0)
+            property_changed(source, property, MediaPlayer2.id);
     }
     void player_property_changed(Object source, ParamSpec property) {
-        property_changed(source, property, MediaPlayer2.Player.id);
+        if (player_id != 0)
+            property_changed(source, property, MediaPlayer2.Player.id);
     }
     void property_changed(Object source, ParamSpec property, int id) {
         debug("%s.%s changed.", source.get_type().name(), property.name);
