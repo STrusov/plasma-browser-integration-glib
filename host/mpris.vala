@@ -119,7 +119,16 @@ class Mpris : AbstractBrowserPlugin, Object {
     public Mpris() {
         mp = new MediaPlayer2(this);
         player = new MediaPlayer2.Player(this);
-        Bus.own_name(BusType.SESSION,
+        for (var i = MediaPlayer2.id; i <= MediaPlayer2.Player.id; ++i)
+            property_changes[i] = new HashTable<string, Variant>(str_hash, str_equal);
+        mp.notify.connect_after(mp_property_changed);
+        player.notify.connect_after(player_property_changed);
+    }
+
+    void register_service() {
+        if (dbus_owner_id != 0)
+            return;
+        dbus_owner_id = Bus.own_name(BusType.SESSION,
             // ...each additional instance should request a unique bus name,
             // adding a dot and a unique identifier to its usual bus name.
             // According to the D-Bus specification, the unique identifier
@@ -131,8 +140,8 @@ class Mpris : AbstractBrowserPlugin, Object {
             (conn, name) => {
                 dbus_conn = conn;
                 try {
-                    conn.register_object("/org/mpris/MediaPlayer2", mp);
-                    conn.register_object("/org/mpris/MediaPlayer2", player);
+                    mp_id = conn.register_object("/org/mpris/MediaPlayer2", mp);
+                    player_id = conn.register_object("/org/mpris/MediaPlayer2", player);
                 } catch (IOError e) {
                     critical("Unable to register object: %s", e.message);
                 }
@@ -140,13 +149,20 @@ class Mpris : AbstractBrowserPlugin, Object {
             (conn, name) => info("Bus name %s aquired.", name),
             (conn, name) => critical("Bus name %s lost.", name)
         );
-        for (var i = MediaPlayer2.id; i <= MediaPlayer2.Player.id; ++i)
-            property_changes[i] = new HashTable<string, Variant>(str_hash, str_equal);
-        mp.notify.connect_after(mp_property_changed);
-        player.notify.connect_after(player_property_changed);
     }
 
+    void unregister_service() {
+        dbus_conn.unregister_object(mp_id);
+        dbus_conn.unregister_object(player_id);
+        Bus.unown_name(dbus_owner_id);
+        dbus_owner_id = mp_id = player_id = 0;
+    }
+
+    uint dbus_owner_id = 0;
     DBusConnection dbus_conn;
+    uint mp_id = 0;
+    uint player_id = 0;
+
     HashTable<string, Variant> property_changes[2];
     uint pending = 0;
 
@@ -280,10 +296,11 @@ class Mpris : AbstractBrowserPlugin, Object {
         debug("Browser event: %s.", event);
         switch (event) {
         case "gone":
-            // TODO: unregister_service()
-            player.set_playback_status("Stopped");
+            // No need to clear variables being set on the "playing" event (including by process_metadata()).
+            unregister_service();
             break;
         case "playing":
+            register_service();
             player.set_playback_status("Playing");
             page_title = json_get_string_member(json, "pageTitle");
             tab_title  = json_get_string_member(json, "tabTitle");
