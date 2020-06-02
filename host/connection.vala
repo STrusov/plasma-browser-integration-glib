@@ -15,6 +15,10 @@ void create(OnDataReceived handler) {
         channel.set_encoding(null);
         channel.set_buffered(false);
         channel.add_watch(IOCondition.IN, read_data);
+        channel.add_watch(IOCondition.HUP, () => {
+            Posix.exit(Posix.EXIT_SUCCESS);
+            return false;
+        });
     } catch (IOChannelError e) {
         error("stdin unavailable: %s.", e.message);
     }
@@ -35,9 +39,6 @@ void send_data(Json.Object data) {
 }
 
 bool read_data(IOChannel source, IOCondition condition) {
-    if (condition == IOCondition.HUP) {
-        error("Connection lost.\n");
-    }
     try {
         size_t rc;
         uint32 length = 0;
