@@ -8,10 +8,38 @@ class Settings : AbstractBrowserPlugin, Object {
         case "setEnvironment":
             string name = json.get_string_member("browserName");
             Mpris mpris = (Mpris)PluginManager.plugin_for_subsystem("mpris");
-            // TODO: vivaldi, brave etc
+            // Most chromium-based browsers just impersonate Chromium nowadays to keep websites from locking them out
+            // so we'll need to make an educated guess from our parent process
+            if (name == "chrome" || name == "chromium") {
+                var file = FileStream.open("/proc/%d/comm".printf(Posix.getppid()),"r");
+                string parent_name = file.read_line();
+                if (parent_name != null && parent_name.length > 0)
+                    name = parent_name;
+            }
             switch (name) {
-            case "firefox": mpris.identity = mpris.desktop_entry = name; break;
+            case "brave":
+                mpris.identity = "Brave";
+                mpris.desktop_entry = "brave-browser";
+                break;
+            case "chrome":
+                mpris.identity = mpris.desktop_entry = "google-chrome";
+                break;
+            case "chromium":
+                mpris.identity = mpris.desktop_entry = "chromium-browser";
+                break;
             default:
+                break;
+            case "firefox":
+            case "opera":
+                mpris.identity = mpris.desktop_entry = name;
+                break;
+            case "vivaldi":
+                mpris.identity = name;
+                mpris.desktop_entry = "vivaldi-stable";
+                break;
+            case "yandex_browser":
+                // FIXME: Gnome hides this because of '-beta'
+                mpris.identity = mpris.desktop_entry = "yandex-browser-beta";
                 break;
             }
             break;
