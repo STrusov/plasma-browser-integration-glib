@@ -26,7 +26,7 @@
    THE SOFTWARE.
 */
 
-const string host_version_string = "0.10-GLib";
+const string host_version_string = version_string + "-GLib";
 
 int main(string[] args)
 {
