@@ -1,9 +1,9 @@
 
 
 /** [[https://specifications.freedesktop.org/mpris-spec/latest/|MPRIS D-Bus Interface Specification]] */
-class Mpris : AbstractBrowserPlugin, Object {
+class Mpris : AbstractBrowserPlugin {
 
-    public unowned string subsystem_name() { return "mpris"; }
+    public override unowned string subsystem_name() { return "mpris"; }
 
     /** [[https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html|Specification]] */
     [DBus(name = "org.mpris.MediaPlayer2")]
@@ -223,7 +223,7 @@ class Mpris : AbstractBrowserPlugin, Object {
             "org.mpris.MediaPlayer2.Player"
         };
         for (int i = 0; i < 2; ++i) {
-            unowned var iface = property_changes[i];
+            unowned HashTable<string, Variant> iface = property_changes[i];
             if (iface.length == 0)
                 continue;
             var builder = new VariantBuilder(VariantType.ARRAY);
@@ -310,7 +310,7 @@ class Mpris : AbstractBrowserPlugin, Object {
     private static unowned string json_get_string_member(Json.Object json, string name) {
         return json.has_member(name) ? json.get_string_member(name) : null;
     }
-    public void handle_data(string event, Json.Object json) {
+    internal override void handle_data(string event, Json.Object json) {
         debug("Browser event: %s.", event);
         switch (event) {
         case "gone":

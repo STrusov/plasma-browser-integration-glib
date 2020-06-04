@@ -1,9 +1,9 @@
 
-interface AbstractBrowserPlugin : Object {
+abstract class AbstractBrowserPlugin : Object {
 
     public abstract unowned string subsystem_name();
 
-    public virtual int protocol_version() { return 1; }
+    internal virtual int protocol_version() { return 1; }
 
     protected virtual Json.Object status() { return new Json.Object(); }
 

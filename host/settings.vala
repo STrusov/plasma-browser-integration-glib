@@ -1,8 +1,8 @@
 
-class Settings : AbstractBrowserPlugin, Object {
-    public unowned string subsystem_name() { return "settings"; }
+class Settings : AbstractBrowserPlugin {
+    public override unowned string subsystem_name() { return "settings"; }
 
-    public void handle_data(string event, Json.Object json) {
+    internal override void handle_data(string event, Json.Object json) {
         debug("settings event: %s.", event);
         switch (event) {
         case "setEnvironment":
@@ -50,7 +50,7 @@ class Settings : AbstractBrowserPlugin, Object {
             break;
         }
     }
-    public override Json.Object? handle_request(int64 serial, string event, Json.Object data) {
+    internal override Json.Object? handle_request(int64 serial, string event, Json.Object data) {
         var ret = new Json.Object();
         switch (event) {
         case "getSubsystemStatus":
