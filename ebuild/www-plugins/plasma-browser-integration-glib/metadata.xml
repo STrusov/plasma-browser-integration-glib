@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>sergei.a.trusov@ya.ru</email>
+		<name>Sergei A. Trusov</name>
+	</maintainer>
+	<longdescription>
+		Plasma Integration browser plugin support for GTK-based environments.
+	</longdescription>
+	<upstream>
+		<remote-id type="github">STrusov/plasma-browser-integration-glib</remote-id>
+	</upstream>
+</pkgmetadata>
