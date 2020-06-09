@@ -19,8 +19,6 @@ LICENSE="MIT"
 SLOT="0"
 KEYWORDS="amd64"
 
-#S="${WORKDIR}"
-
 RDEPEND="
 	dev-libs/glib[dbus]
 	dev-libs/json-glib

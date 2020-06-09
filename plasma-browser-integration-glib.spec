@@ -33,8 +33,8 @@ BuildRequires: vala-tools
 
 %files
 %_bindir/plasma-browser-integration-host
-%config %_sysconfdir/chromium/native-messaging-hosts/org.kde.plasma.browser_integration.json
-%config %_sysconfdir/opt/chrome/native-messaging-hosts/org.kde.plasma.browser_integration.json
+%_sysconfdir/chromium/native-messaging-hosts/org.kde.plasma.browser_integration.json
+%_sysconfdir/opt/chrome/native-messaging-hosts/org.kde.plasma.browser_integration.json
 %_libdir/mozilla/native-messaging-hosts/org.kde.plasma.browser_integration.json
 
 %changelog
