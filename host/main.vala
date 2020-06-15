@@ -28,9 +28,29 @@
 
 const string host_version_string = version_string + "-GLib";
 
+
+// Log.writer_journald() journals just everithing.
+// To filter out a lot of debug events we partially simulate ducumented
+// behaviour of g_log_writer_default() with G_MESSAGES_DEBUG,
+// checking if this environment variable is not set to 'all'.
+//
+// Please note that original msgHandler() sends its output to the browser.
+LogWriterOutput log_writer(LogLevelFlags ll, LogField[] msg)
+{
+    if (ll == LogLevelFlags.LEVEL_DEBUG || ll == LogLevelFlags.LEVEL_INFO) {
+        var allowed = Environment.get_variable("G_MESSAGES_DEBUG");
+        if (allowed == null || allowed != "all")
+            return LogWriterOutput.HANDLED;
+    }
+    if (Log.writer_journald(ll, msg) == LogWriterOutput.HANDLED)
+        return LogWriterOutput.HANDLED;
+    return Log.writer_standard_streams(ll, msg);
+}
+
+
 int main(string[] args)
 {
-    Log.set_writer_func(Log.writer_journald);
+    Log.set_writer_func(log_writer);
 
     PluginManager.add_plugin(new Settings());
     PluginManager.add_plugin(new Mpris());
@@ -39,6 +59,7 @@ int main(string[] args)
 
     return 0;
 }
+
 
 
 

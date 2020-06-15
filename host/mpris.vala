@@ -160,7 +160,7 @@ class Mpris : AbstractBrowserPlugin {
                     critical("Unable to register object: %s", e.message);
                 }
             },
-            (conn, name) => info("Bus name %s aquired.", name),
+            (conn, name) => message("Bus name %s aquired.", name),
             (conn, name) => critical("Bus name %s lost.", name)
         );
     }
