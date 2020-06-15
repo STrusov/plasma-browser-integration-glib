@@ -12,7 +12,7 @@ if [[ ${PV} == 9999 ]]; then
 	KEYWORDS=""
 	EGIT_REPO_URI="https://github.com/STrusov/${PN}.git"
 else
-	SRC_URI="$HOMEPAGE/archive/${PV}.tar.gz -> ${MY_P}.tar.gz"
+	SRC_URI="$HOMEPAGE/archive/v${PV}.tar.gz -> ${MY_P}.tar.gz"
 fi
 
 LICENSE="MIT"
