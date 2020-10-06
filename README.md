@@ -8,7 +8,9 @@ First of all install the corresponding browser plugin:
 * [Chromium-based](https://chrome.google.com/webstore/detail/plasma-integration/cimiefiiaegbelhefglklhhakcgmhkai)
 * [Firefox](https://addons.mozilla.org/ru/firefox/addon/plasma-integration/)
 
-Please note Chromium has built-in partial MPRIS support, see #hardware-media-key-handling and #enable-media-session-service about://flags options. It should be disabled to do not interfere.
+Please note Chromium has built-in partial MPRIS support, see `#hardware-media-key-handling` and `#enable-media-session-service` about://flags options. It should be disabled to do not interfere.
+
+Firefox currently turned on MPRIS support by default as well, see `media.hardwaremediakeys.enabled` in about:config.
 
 ### Gnome
 Install [Mpris Indicator Button](https://extensions.gnome.org/extension/1379/mpris-indicator-button/) for 3.36+ (3.34 should work too, IIRC) or [Media Player Indicator](https://extensions.gnome.org/extension/55/media-player-indicator/) for v3.32 (not tested).
