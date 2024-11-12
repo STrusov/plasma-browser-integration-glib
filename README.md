@@ -14,7 +14,7 @@ Firefox currently turned on MPRIS support by default as well, see `media.hardwar
 
 ### Gnome
 Install [Mpris Indicator Button](https://extensions.gnome.org/extension/1379/mpris-indicator-button/) for 3.36+ (3.34 should work too, IIRC) or [Media Player Indicator](https://extensions.gnome.org/extension/55/media-player-indicator/) for v3.32 (not tested).
-![](https://forum.altlinux.org/index.php?action=dlattach;topic=44009.0;attach=26669;image)
+![](MPRIS1.png)
 
 ### i3/Sway
 To support Play/Pause, add to the configuration file:
